@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from core import tagger
+from textteaser import TextTeaser
 from pymongo import *
 from flask import Flask, request
 from urlparse import urljoin
@@ -45,6 +46,13 @@ def tags():
         description = data['data']['text']
 
         tags = json.dumps(mytagger(data['data']['text'],10), default=lambda x: str(x).strip('"\''))
+
+        tt = TextTeaser()
+        sentences = tt.summarize(title, text)
+        sentences = sentences[:4]
+        summary = ""
+        for sentence in sentences:
+          summary = summary + sentence
        
         #For logs
         app.logger.info(tags)

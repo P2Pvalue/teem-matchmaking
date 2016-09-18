@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from core import tagger
+from textteaser import TextTeaser
 from pymongo import *
 from flask import Flask, request
 from urlparse import urljoin
@@ -39,17 +40,24 @@ def tags():
             session = authfromSwellRT()
 
         data = request.get_json()
-        
+        app.logger.info(data)
         #Initialisation for context
         wave_id = data['waveid']
         description = data['data']['text']
+        name = data['data']['name']
 
         tags = json.dumps(mytagger(data['data']['text'],10), default=lambda x: str(x).strip('"\''))
+
+        tt = TextTeaser()
+        sentences = tt.summarize(name, description)
+        summary = json.dumps(sentences[:4])
+
+        app.logger.info(summary);
        
         #For logs
         app.logger.info(tags)
         
-        post2swellRT(session,wave_id,tags)
+        post2swellRT(session,wave_id,tags,summary)
         
         return json.dumps(True)
     else:
@@ -83,14 +91,21 @@ def authfromSwellRT():
         app.logger.error('Cannot authenticate from SwellRT. Exiting!')
 
 
-def post2swellRT(session,wave_id,tags):
+def post2swellRT(session,wave_id,tags,summary):
     #Making the Update Link
     update_link = swellrt + 'object/' + wave_id + '/tags'
     
     try:
         update = session.post(update_link, json=tags)
     except requests.exceptions.RequestException as e:
-        app.logger.info('Updating to SwellRT failed')
+        app.logger.info('Updating tags to SwellRT failed')
+
+    summary_update_link = swellrt + 'object/' + wave_id + '/summary'
+    
+    try:
+        update = session.post(summary_update_link, json=summary)
+    except requests.exceptions.RequestException as e:
+        app.logger.info('Updating summary to SwellRT failed')
 
 
 if __name__ == "__main__":
